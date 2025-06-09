@@ -652,8 +652,9 @@
             const activityIndex = activities.findIndex(a => a.id === currentActivity.id);
             if (activityIndex !== -1) {
                 activities[activityIndex].completedCount++;
-                currentActivity.completedCount++;
                 saveActivities();
+                // Update currentActivity reference to match the updated data
+                currentActivity = activities[activityIndex];
                 renderActivity();
             }
         }
