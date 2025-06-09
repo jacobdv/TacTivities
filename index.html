@@ -416,6 +416,27 @@
             cursor: pointer;
         }
 
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #f4f1eb;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #7ba885;
+        }
+
         .btn-edit {
             background: #7ba885;
             color: white;
@@ -506,6 +527,7 @@
             <button class="modal-close" id="closeManagementModal">&times;</button>
             <h2 style="color: #a8c4a2; margin-bottom: 20px;">Manage Activities</h2>
             <button class="btn btn-primary" id="addActivityBtn" style="width: 100%; margin-bottom: 20px;">Add New Activity</button>
+            <button class="btn btn-secondary" id="resetDefaultsBtn" style="width: 100%; margin-bottom: 20px;">Reset to Defaults</button>
             <h3 style="color: #f4f1eb; margin-bottom: 15px;">All Activities</h3>
             <div class="activity-list" id="activityList"></div>
         </div>
@@ -529,18 +551,17 @@
                     <textarea class="form-textarea" id="activityDescription" required></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Category</label>
-                    <select class="form-select" id="activityCategory" required>
-                        <option value="">Select Category</option>
-                        <option value="Outdoors">Outdoors</option>
-                        <option value="Culture">Culture</option>
-                        <option value="Food & Drink">Food & Drink</option>
-                        <option value="Social">Social</option>
-                        <option value="Fitness">Fitness</option>
-                        <option value="Creative">Creative</option>
-                        <option value="Shopping">Shopping</option>
-                        <option value="Entertainment">Entertainment</option>
-                    </select>
+                    <label class="form-label">Category (Select All That Apply)</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Outdoors"> Outdoors</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Culture"> Culture</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Food & Drink"> Food & Drink</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Social"> Social</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Fitness"> Fitness</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Creative"> Creative</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Shopping"> Shopping</label>
+                        <label class="checkbox-item"><input type="checkbox" name="category" value="Entertainment"> Entertainment</label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Time Commitment</label>
@@ -553,14 +574,13 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Social Level</label>
-                    <select class="form-select" id="activitySocialness" required>
-                        <option value="">Select Social Level</option>
-                        <option value="solo">Solo</option>
-                        <option value="small_group">Small Group</option>
-                        <option value="large_gathering">Large Gathering</option>
-                        <option value="not_applicable">Not Applicable</option>
-                    </select>
+                    <label class="form-label">Social Level (Select All That Apply)</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" name="socialness" value="solo"> Solo</label>
+                        <label class="checkbox-item"><input type="checkbox" name="socialness" value="small_group"> Small Group</label>
+                        <label class="checkbox-item"><input type="checkbox" name="socialness" value="large_gathering"> Large Gathering</label>
+                        <label class="checkbox-item"><input type="checkbox" name="socialness" value="not_applicable"> Not Applicable</label>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Dog Friendly</label>
@@ -575,6 +595,7 @@
                     <label class="form-label">Price</label>
                     <select class="form-select" id="activityPrice">
                         <option value="">Select Price Range</option>
+                        <option value="free">$0 (Free)</option>
                         <option value="low">< $20</option>
                         <option value="medium">$21-$50</option>
                         <option value="high">$50+</option>
@@ -660,24 +681,79 @@
 
         window.openEditActivityModal = function(activityId) {
             const activity = activities.find(a => a.id === activityId);
-            if (!activity) return;
+            if (!activity) {
+                console.error('Activity not found:', activityId);
+                return;
+            }
             
             editingActivityId = activityId;
             document.getElementById('activityModalTitle').textContent = 'Edit Activity';
             
-            document.getElementById('activityName').value = activity.name;
-            document.getElementById('activityDescription').value = activity.description;
-            document.getElementById('activityCategory').value = activity.category;
-            document.getElementById('activityTime').value = activity.timeCommitment;
-            document.getElementById('activitySocialness').value = activity.socialness;
-            document.getElementById('activityDogFriendly').value = activity.dogFriendly || '';
-            document.getElementById('activityPrice').value = activity.price || '';
-            document.getElementById('activityLocation').value = activity.location || '';
-            document.getElementById('activityDriveTime').value = activity.driveTime || '';
-            document.getElementById('activitySeason').value = activity.season || '';
-            document.getElementById('activityNotes').value = activity.notes || '';
+            // Fill in text fields with error checking
+            const fields = {
+                'activityName': activity.name || '',
+                'activityDescription': activity.description || '',
+                'activityTime': activity.timeCommitment || '',
+                'activityDogFriendly': activity.dogFriendly || '',
+                'activityPrice': activity.price || '',
+                'activityLocation': activity.location || '',
+                'activityDriveTime': activity.driveTime || '',
+                'activitySeason': activity.season || '',
+                'activityNotes': activity.notes || ''
+            };
             
+            // Set field values with error checking
+            Object.entries(fields).forEach(([fieldId, value]) => {
+                const element = document.getElementById(fieldId);
+                if (element) {
+                    element.value = value;
+                } else {
+                    console.error(`Element not found: ${fieldId}`);
+                }
+            });
+            
+            // Clear all checkboxes first
+            const categoryBoxes = document.querySelectorAll('input[name="category"]');
+            const socialnessBoxes = document.querySelectorAll('input[name="socialness"]');
+            
+            categoryBoxes.forEach(cb => cb.checked = false);
+            socialnessBoxes.forEach(cb => cb.checked = false);
+            
+            console.log('Found checkboxes:', {categories: categoryBoxes.length, socialness: socialnessBoxes.length});
+            
+            // Handle category checkboxes - support both old single values and new arrays
+            if (activity.category) {
+                const categories = Array.isArray(activity.category) ? activity.category : [activity.category];
+                console.log('Setting categories:', categories);
+                categories.forEach(cat => {
+                    const checkbox = document.querySelector(`input[name="category"][value="${cat}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log('Checked category:', cat);
+                    } else {
+                        console.error('Category checkbox not found:', cat);
+                    }
+                });
+            }
+            
+            // Handle socialness checkboxes - support both old single values and new arrays
+            if (activity.socialness) {
+                const socialLevels = Array.isArray(activity.socialness) ? activity.socialness : [activity.socialness];
+                console.log('Setting social levels:', socialLevels);
+                socialLevels.forEach(social => {
+                    const checkbox = document.querySelector(`input[name="socialness"][value="${social}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log('Checked social level:', social);
+                    } else {
+                        console.error('Social level checkbox not found:', social);
+                    }
+                });
+            }
+            
+            hideMessages();
             document.getElementById('activityModal').style.display = 'block';
+            console.log('Edit modal opened for activity:', activity.name);
         }
 
         window.deleteActivity = function(activityId) {
@@ -716,13 +792,43 @@
             showMessage('Activity deleted successfully!', 'success');
         }
 
-        window.cancelDeleteActivity = function(activityId) {
-            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
-            if (activityItem) {
-                const confirmDiv = activityItem.querySelector('.delete-confirm');
-                if (confirmDiv) {
-                    confirmDiv.remove();
-                }
+        window.resetToDefaults = function() {
+            // Show confirmation UI instead of using confirm()
+            const managementModal = document.getElementById('managementModal');
+            const existingConfirm = managementModal.querySelector('.reset-confirm');
+            if (existingConfirm) {
+                existingConfirm.remove();
+                return;
+            }
+            
+            const confirmDiv = document.createElement('div');
+            confirmDiv.className = 'delete-confirm reset-confirm';
+            confirmDiv.innerHTML = `
+                <div class="delete-confirm-text">Reset to default activities? This will replace all current activities and reset completion counts to 0.</div>
+                <div class="delete-confirm-buttons">
+                    <button class="btn-confirm-delete" onclick="confirmResetDefaults()">Reset</button>
+                    <button class="btn-cancel-delete" onclick="cancelResetDefaults()">Cancel</button>
+                </div>
+            `;
+            
+            const addButton = document.getElementById('addActivityBtn');
+            addButton.parentNode.insertBefore(confirmDiv, addButton.nextSibling);
+            confirmDiv.style.display = 'block';
+        }
+
+        window.confirmResetDefaults = function() {
+            activities = getDefaultActivities();
+            saveActivities();
+            renderActivityList();
+            window.showRandomActivity();
+            showMessage('Reset to default activities completed!', 'success');
+            cancelResetDefaults();
+        }
+
+        window.cancelResetDefaults = function() {
+            const confirmDiv = document.querySelector('.reset-confirm');
+            if (confirmDiv) {
+                confirmDiv.remove();
             }
         }
 
@@ -733,9 +839,7 @@
                 // Check if all elements exist first
                 const nameEl = document.getElementById('activityName');
                 const descEl = document.getElementById('activityDescription');
-                const catEl = document.getElementById('activityCategory');
                 const timeEl = document.getElementById('activityTime');
-                const socialEl = document.getElementById('activitySocialness');
                 const dogEl = document.getElementById('activityDogFriendly');
                 const priceEl = document.getElementById('activityPrice');
                 const locEl = document.getElementById('activityLocation');
@@ -743,19 +847,26 @@
                 const seasonEl = document.getElementById('activitySeason');
                 const notesEl = document.getElementById('activityNotes');
 
-                console.log('Elements found:', {nameEl, descEl, catEl, timeEl, socialEl});
+                console.log('Elements found:', {nameEl, descEl, timeEl});
 
-                if (!nameEl || !descEl || !catEl || !timeEl || !socialEl) {
+                if (!nameEl || !descEl || !timeEl) {
                     console.error('Required form elements not found in DOM');
                     return;
                 }
 
+                // Get checkbox values for categories and social levels
+                const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
+                const socialnessCheckboxes = document.querySelectorAll('input[name="socialness"]:checked');
+                
+                const categories = Array.from(categoryCheckboxes).map(cb => cb.value);
+                const socialLevels = Array.from(socialnessCheckboxes).map(cb => cb.value);
+
                 const formData = {
                     name: nameEl.value.trim(),
                     description: descEl.value.trim(),
-                    category: catEl.value,
+                    category: categories, // Now an array
                     timeCommitment: timeEl.value,
-                    socialness: socialEl.value,
+                    socialness: socialLevels, // Now an array
                     dogFriendly: dogEl ? dogEl.value || 'unknown' : 'unknown',
                     price: priceEl ? priceEl.value || 'unknown' : 'unknown',
                     location: locEl ? locEl.value.trim() : '',
@@ -771,9 +882,9 @@
                 const missingFields = [];
                 if (!formData.name) missingFields.push('Activity Name');
                 if (!formData.description) missingFields.push('Description');
-                if (!formData.category) missingFields.push('Category');
+                if (!formData.category || formData.category.length === 0) missingFields.push('Category');
                 if (!formData.timeCommitment) missingFields.push('Time Commitment');
-                if (!formData.socialness) missingFields.push('Social Level');
+                if (!formData.socialness || formData.socialness.length === 0) missingFields.push('Social Level');
 
                 if (missingFields.length > 0) {
                     console.error('Missing required fields:', missingFields);
@@ -903,7 +1014,7 @@
                     ${activity.completedCount > 0 ? `<div class="completed-badge">✓ ${activity.completedCount}</div>` : ''}
                     <div class="activity-header">
                         <h2 class="activity-name">${activity.name}</h2>
-                        <span class="activity-category">${activity.category}</span>
+                        <span class="activity-category">${Array.isArray(activity.category) ? activity.category.join(', ') : activity.category}</span>
                     </div>
                     <p class="activity-description">${activity.description}</p>
                     <div class="activity-meta">
@@ -952,7 +1063,13 @@
         }
 
         function formatPrice(price) {
-            const priceMap = { 'low': '< $20', 'medium': '$21-$50', 'high': '$50+', 'unknown': 'Unknown' };
+            const priceMap = { 
+                'free': 'Free', 
+                'low': '< $20', 
+                'medium': '$21-$50', 
+                'high': '$50+', 
+                'unknown': 'Unknown' 
+            };
             return priceMap[price] || 'Unknown';
         }
 
@@ -993,6 +1110,11 @@
             editingActivityId = null;
             document.getElementById('activityModalTitle').textContent = 'Add New Activity';
             document.getElementById('activityForm').reset();
+            
+            // Clear all checkboxes
+            document.querySelectorAll('input[name="category"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('input[name="socialness"]').forEach(cb => cb.checked = false);
+            
             hideMessages();
             document.getElementById('activityModal').style.display = 'block';
         }
@@ -1071,7 +1193,7 @@
                 <div class="activity-item" data-activity-id="${activity.id}">
                     <div class="activity-item-name">${activity.name}</div>
                     <div class="activity-item-meta">
-                        ${activity.category} • ${formatTimeCommitment(activity.timeCommitment)} • ${formatSocialness(activity.socialness)} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)} • ${formatDriveTime(activity.driveTime)}
+                        ${Array.isArray(activity.category) ? activity.category.join(', ') : activity.category} • ${formatTimeCommitment(activity.timeCommitment)} • ${Array.isArray(activity.socialness) ? activity.socialness.map(s => formatSocialness(s)).join(', ') : formatSocialness(activity.socialness)} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)} • ${formatDriveTime(activity.driveTime)}
                         ${activity.completedCount > 0 ? ` • Completed ${activity.completedCount} Times` : ''}
                     </div>
                     <div class="activity-item-actions">
@@ -1088,11 +1210,11 @@
                     id: '1',
                     name: 'Visit Point Defiance Park',
                     description: 'Explore the trails, visit the zoo, or walk along Owen Beach. One of Tacoma\'s crown jewels with something for every mood.',
-                    category: 'Outdoors',
-                    socialness: 'solo',
+                    category: ['Outdoors'],
+                    socialness: ['solo'],
                     timeCommitment: 'medium',
                     dogFriendly: 'yes',
-                    price: 'low',
+                    price: 'free',
                     driveTime: '6-15',
                     location: 'Point Defiance Park, Tacoma',
                     completedCount: 0,
@@ -1104,8 +1226,8 @@
                     id: '2',
                     name: 'Museum of Glass Visit',
                     description: 'Watch live glass blowing demonstrations and explore contemporary glass art. The iconic cone is a Tacoma landmark.',
-                    category: 'Culture',
-                    socialness: 'small_group',
+                    category: ['Culture'],
+                    socialness: ['small_group'],
                     timeCommitment: 'short',
                     dogFriendly: 'no',
                     price: 'medium',
@@ -1120,8 +1242,8 @@
                     id: '3',
                     name: 'Try a New Coffee Shop',
                     description: 'Discover a local coffee spot you\'ve never been to. Tacoma has amazing coffee culture waiting to be explored.',
-                    category: 'Food & Drink',
-                    socialness: 'solo',
+                    category: ['Food & Drink', 'Social'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'quick',
                     dogFriendly: 'unknown',
                     price: 'low',
@@ -1136,11 +1258,11 @@
                     id: '4',
                     name: 'Walk the Chihuly Bridge of Glass',
                     description: 'Stroll across this stunning pedestrian bridge connecting downtown to the Museum District, featuring Dale Chihuly\'s glass installations.',
-                    category: 'Culture',
-                    socialness: 'not_applicable',
+                    category: ['Culture', 'Outdoors'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'quick',
                     dogFriendly: 'yes',
-                    price: 'low',
+                    price: 'free',
                     driveTime: '6-15',
                     location: 'Bridge of Glass, Tacoma',
                     completedCount: 0,
@@ -1152,8 +1274,8 @@
                     id: '5',
                     name: 'Explore Proctor District',
                     description: 'Browse unique shops, grab a bite, and enjoy the neighborhood charm of this historic Tacoma area.',
-                    category: 'Shopping',
-                    socialness: 'small_group',
+                    category: ['Shopping', 'Food & Drink'],
+                    socialness: ['small_group'],
                     timeCommitment: 'medium',
                     dogFriendly: 'unknown',
                     price: 'medium',
@@ -1168,8 +1290,8 @@
                     id: '6',
                     name: 'Tacoma Art Museum',
                     description: 'Discover regional art and rotating exhibitions in this beautiful downtown museum.',
-                    category: 'Culture',
-                    socialness: 'solo',
+                    category: ['Culture'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'short',
                     dogFriendly: 'no',
                     price: 'medium',
@@ -1184,8 +1306,8 @@
                     id: '7',
                     name: 'Hike Mount Rainier Trails',
                     description: 'Take a day trip to nearby Mount Rainier for spectacular hiking and mountain views.',
-                    category: 'Outdoors',
-                    socialness: 'small_group',
+                    category: ['Outdoors', 'Fitness'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'long',
                     dogFriendly: 'yes',
                     price: 'medium',
@@ -1200,8 +1322,8 @@
                     id: '8',
                     name: 'Visit Freighthouse Square',
                     description: 'Browse local vendors, grab food, and enjoy this converted historic train depot.',
-                    category: 'Shopping',
-                    socialness: 'not_applicable',
+                    category: ['Shopping', 'Food & Drink'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'short',
                     dogFriendly: 'unknown',
                     price: 'low',
@@ -1216,8 +1338,8 @@
                     id: '9',
                     name: 'Catch a Show at Broadway Center',
                     description: 'Experience live theater, dance, or music at one of Tacoma\'s premier performing arts venues.',
-                    category: 'Entertainment',
-                    socialness: 'large_gathering',
+                    category: ['Entertainment', 'Culture'],
+                    socialness: ['small_group', 'large_gathering'],
                     timeCommitment: 'medium',
                     dogFriendly: 'no',
                     price: 'high',
@@ -1232,11 +1354,11 @@
                     id: '10',
                     name: 'Walk the Waterfront Trail',
                     description: 'Enjoy views of Commencement Bay while walking or biking along Tacoma\'s waterfront.',
-                    category: 'Outdoors',
-                    socialness: 'solo',
+                    category: ['Outdoors', 'Fitness'],
+                    socialness: ['solo', 'small_group'],
                     timeCommitment: 'short',
                     dogFriendly: 'yes',
-                    price: 'low',
+                    price: 'free',
                     driveTime: '6-15',
                     location: 'Ruston Way Waterfront',
                     completedCount: 0,
@@ -1251,6 +1373,16 @@
             loadActivities();
             setupEventListeners();
             showRandomActivity();
+        }
+
+        window.cancelDeleteActivity = function(activityId) {
+            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (activityItem) {
+                const confirmDiv = activityItem.querySelector('.delete-confirm');
+                if (confirmDiv) {
+                    confirmDiv.remove();
+                }
+            }
         }
 
         function setupEventListeners() {
