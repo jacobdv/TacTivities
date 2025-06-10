@@ -607,18 +607,7 @@
                     <label class="form-label">Location</label>
                     <input type="text" class="form-input" id="activityLocation">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Drive Time</label>
-                    <select class="form-select" id="activityDriveTime">
-                        <option value="">Select Drive Time</option>
-                        <option value="0-5">0-5 Minutes</option>
-                        <option value="6-15">6-15 Minutes</option>
-                        <option value="16-30">16-30 Minutes</option>
-                        <option value="31-60">31-60 Minutes</option>
-                        <option value="60+">60+ Minutes</option>
-                        <option value="unknown">Unknown</option>
-                    </select>
-                </div>
+
                 <div class="form-group">
                     <label class="form-label">Season (Optional)</label>
                     <select class="form-select" id="activitySeason">
@@ -774,18 +763,6 @@
             return priceMap[price] || 'Unknown';
         }
 
-        function formatDriveTime(driveTime) {
-            const driveMap = { 
-                '0-5': '0-5 Min', 
-                '6-15': '6-15 Min', 
-                '16-30': '16-30 Min', 
-                '31-60': '31-60 Min', 
-                '60+': '60+ Min', 
-                'unknown': 'Unknown' 
-            };
-            return driveMap[driveTime] || 'Unknown';
-        }
-
         function formatSeason(season) {
             return season ? season.charAt(0).toUpperCase() + season.slice(1) : '';
         }
@@ -866,7 +843,6 @@
                         <span class="meta-tag">👥 ${socialnessDisplay}</span>
                         <span class="meta-tag">🐕 ${formatDogFriendly(activity.dogFriendly)}</span>
                         <span class="meta-tag">💰 ${formatPrice(activity.price)}</span>
-                        <span class="meta-tag">🚗 ${formatDriveTime(activity.driveTime)}</span>
                         ${activity.season ? `<span class="meta-tag">🌿 ${formatSeason(activity.season)}</span>` : ''}
                     </div>
                     ${activity.location ? `<div class="activity-location">📍 ${activity.location}</div>` : ''}
@@ -947,7 +923,6 @@
             document.getElementById('activityDogFriendly').value = activity.dogFriendly || '';
             document.getElementById('activityPrice').value = activity.price || '';
             document.getElementById('activityLocation').value = activity.location || '';
-            document.getElementById('activityDriveTime').value = activity.driveTime || '';
             document.getElementById('activitySeason').value = activity.season || '';
             document.getElementById('activityNotes').value = activity.notes || '';
             
@@ -991,7 +966,6 @@
                 const dogEl = document.getElementById('activityDogFriendly');
                 const priceEl = document.getElementById('activityPrice');
                 const locEl = document.getElementById('activityLocation');
-                const driveEl = document.getElementById('activityDriveTime');
                 const seasonEl = document.getElementById('activitySeason');
                 const notesEl = document.getElementById('activityNotes');
 
@@ -1015,7 +989,6 @@
                     dogFriendly: dogEl ? dogEl.value || 'unknown' : 'unknown',
                     price: priceEl ? priceEl.value || 'unknown' : 'unknown',
                     location: locEl ? locEl.value.trim() : '',
-                    driveTime: driveEl ? driveEl.value || 'unknown' : 'unknown',
                     season: seasonEl ? seasonEl.value || null : null,
                     notes: notesEl ? notesEl.value.trim() : '',
                     dateAdded: new Date().toISOString()
@@ -1211,7 +1184,7 @@
                     <div class="activity-item" data-activity-id="${activity.id}">
                         <div class="activity-item-name">${activity.name}</div>
                         <div class="activity-item-meta">
-                            ${categoryDisplay} • ${formatTimeCommitment(activity.timeCommitment)} • ${socialnessDisplay} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)} • ${formatDriveTime(activity.driveTime)}
+                            ${categoryDisplay} • ${formatTimeCommitment(activity.timeCommitment)} • ${socialnessDisplay} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)}
                             ${activity.completedCount > 0 ? ` • Completed ${activity.completedCount} Times` : ''}
                         </div>
                         <div class="activity-item-actions">
@@ -1235,7 +1208,6 @@
                     timeCommitment: 'medium',
                     dogFriendly: 'yes',
                     price: 'free',
-                    driveTime: '6-15',
                     location: 'Point Defiance Park, Tacoma',
                     completedCount: 0,
                     season: null,
@@ -1251,7 +1223,6 @@
                     timeCommitment: 'short',
                     dogFriendly: 'no',
                     price: 'medium',
-                    driveTime: '6-15',
                     location: 'Museum of Glass, Tacoma',
                     completedCount: 0,
                     season: null,
@@ -1267,7 +1238,6 @@
                     timeCommitment: 'quick',
                     dogFriendly: 'unknown',
                     price: 'low',
-                    driveTime: '0-5',
                     location: 'Various Locations',
                     completedCount: 0,
                     season: null,
@@ -1283,7 +1253,6 @@
                     timeCommitment: 'quick',
                     dogFriendly: 'yes',
                     price: 'free',
-                    driveTime: '6-15',
                     location: 'Bridge of Glass, Tacoma',
                     completedCount: 0,
                     season: null,
@@ -1299,7 +1268,6 @@
                     timeCommitment: 'medium',
                     dogFriendly: 'unknown',
                     price: 'medium',
-                    driveTime: '16-30',
                     location: 'Proctor District, Tacoma',
                     completedCount: 0,
                     season: null,
@@ -1315,7 +1283,6 @@
                     timeCommitment: 'short',
                     dogFriendly: 'no',
                     price: 'medium',
-                    driveTime: '6-15',
                     location: 'Tacoma Art Museum, Downtown',
                     completedCount: 0,
                     season: null,
@@ -1331,7 +1298,6 @@
                     timeCommitment: 'long',
                     dogFriendly: 'yes',
                     price: 'medium',
-                    driveTime: '60+',
                     location: 'Mount Rainier National Park',
                     completedCount: 0,
                     season: 'summer',
@@ -1347,7 +1313,6 @@
                     timeCommitment: 'short',
                     dogFriendly: 'unknown',
                     price: 'low',
-                    driveTime: '6-15',
                     location: 'Freighthouse Square, Tacoma',
                     completedCount: 0,
                     season: null,
@@ -1363,7 +1328,6 @@
                     timeCommitment: 'medium',
                     dogFriendly: 'no',
                     price: 'high',
-                    driveTime: '6-15',
                     location: 'Broadway Center for the Performing Arts',
                     completedCount: 0,
                     season: null,
@@ -1379,7 +1343,6 @@
                     timeCommitment: 'short',
                     dogFriendly: 'yes',
                     price: 'free',
-                    driveTime: '6-15',
                     location: 'Ruston Way Waterfront',
                     completedCount: 0,
                     season: null,
