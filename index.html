@@ -361,6 +361,7 @@
             color: #d67070;
             padding: 10px;
             border-radius: 8px;
+            margin-top: 20px;
             margin-bottom: 15px;
             font-size: 0.9rem;
             border: 1px solid rgba(214, 112, 112, 0.3);
@@ -372,6 +373,7 @@
             color: #7ba885;
             padding: 10px;
             border-radius: 8px;
+            margin-top: 20px;
             margin-bottom: 15px;
             font-size: 0.9rem;
             border: 1px solid rgba(123, 168, 133, 0.3);
@@ -384,6 +386,7 @@
             border-radius: 8px;
             padding: 15px;
             margin-top: 10px;
+            margin-bottom: 20px;
             display: none;
         }
 
@@ -445,7 +448,7 @@
 
         @media (max-width: 480px) {
             .main-container {
-                padding: 10px;
+                padding: 15px;
             }
             
             .activity-card {
@@ -509,6 +512,7 @@
                 <label class="filter-label">Price</label>
                 <select class="filter-select" id="priceFilter">
                     <option value="">All</option>
+                    <option value="free">Free</option>
                     <option value="low">< $20</option>
                     <option value="medium">$21-$50</option>
                     <option value="high">$50+</option>
@@ -537,9 +541,6 @@
         <div class="modal-content">
             <button class="modal-close" id="closeActivityModal">&times;</button>
             <h2 id="activityModalTitle" style="color: #a8c4a2; margin-bottom: 20px;">Add New Activity</h2>
-            
-            <div class="error-message" id="errorMessage"></div>
-            <div class="success-message" id="successMessage"></div>
             
             <form id="activityForm">
                 <div class="form-group">
@@ -607,6 +608,18 @@
                     <input type="text" class="form-input" id="activityLocation">
                 </div>
                 <div class="form-group">
+                    <label class="form-label">Drive Time</label>
+                    <select class="form-select" id="activityDriveTime">
+                        <option value="">Select Drive Time</option>
+                        <option value="0-5">0-5 Minutes</option>
+                        <option value="6-15">6-15 Minutes</option>
+                        <option value="16-30">16-30 Minutes</option>
+                        <option value="31-60">31-60 Minutes</option>
+                        <option value="60+">60+ Minutes</option>
+                        <option value="unknown">Unknown</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label class="form-label">Season (Optional)</label>
                     <select class="form-select" id="activitySeason">
                         <option value="">Year-Round</option>
@@ -620,319 +633,27 @@
                     <label class="form-label">Notes</label>
                     <textarea class="form-textarea" id="activityNotes"></textarea>
                 </div>
-                <button type="button" class="btn btn-primary" onclick="saveActivityDirect()" style="width: 100%;">Save Activity</button>
+                <button type="button" class="btn btn-primary" id="saveActivityBtn" style="width: 100%;">Save Activity</button>
+                
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
             </form>
         </div>
     </div>
 
     <script>
+        // Global variables
         let activities = [];
         let currentActivity = null;
         let editingActivityId = null;
-        let filters = { timeCommitment: '', socialness: '', dogFriendly: '', price: '' };
+        let filters = { 
+            timeCommitment: '', 
+            socialness: '', 
+            dogFriendly: '', 
+            price: '' 
+        };
 
-        // Helper function to show messages
-        function showMessage(message, type = 'error') {
-            const errorEl = document.getElementById('errorMessage');
-            const successEl = document.getElementById('successMessage');
-            
-            if (type === 'error') {
-                errorEl.textContent = message;
-                errorEl.style.display = 'block';
-                successEl.style.display = 'none';
-            } else {
-                successEl.textContent = message;
-                successEl.style.display = 'block';
-                errorEl.style.display = 'none';
-            }
-            
-            // Auto-hide after 3 seconds
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-                successEl.style.display = 'none';
-            }, 3000);
-        }
-
-        function hideMessages() {
-            document.getElementById('errorMessage').style.display = 'none';
-            document.getElementById('successMessage').style.display = 'none';
-        }
-        window.completeActivity = function() {
-            if (!currentActivity) return;
-            const activityIndex = activities.findIndex(a => a.id === currentActivity.id);
-            if (activityIndex !== -1) {
-                activities[activityIndex].completedCount++;
-                saveActivities();
-                currentActivity = activities[activityIndex];
-                renderActivity();
-            }
-        }
-
-        window.showRandomActivity = function() {
-            const filteredActivities = getFilteredActivities();
-            if (filteredActivities.length === 0) {
-                showNoActivities();
-                return;
-            }
-            const randomIndex = Math.floor(Math.random() * filteredActivities.length);
-            currentActivity = filteredActivities[randomIndex];
-            renderActivity();
-        }
-
-        window.openEditActivityModal = function(activityId) {
-            const activity = activities.find(a => a.id === activityId);
-            if (!activity) {
-                console.error('Activity not found:', activityId);
-                return;
-            }
-            
-            editingActivityId = activityId;
-            document.getElementById('activityModalTitle').textContent = 'Edit Activity';
-            
-            // Fill in text fields with error checking
-            const fields = {
-                'activityName': activity.name || '',
-                'activityDescription': activity.description || '',
-                'activityTime': activity.timeCommitment || '',
-                'activityDogFriendly': activity.dogFriendly || '',
-                'activityPrice': activity.price || '',
-                'activityLocation': activity.location || '',
-                'activityDriveTime': activity.driveTime || '',
-                'activitySeason': activity.season || '',
-                'activityNotes': activity.notes || ''
-            };
-            
-            // Set field values with error checking
-            Object.entries(fields).forEach(([fieldId, value]) => {
-                const element = document.getElementById(fieldId);
-                if (element) {
-                    element.value = value;
-                } else {
-                    console.error(`Element not found: ${fieldId}`);
-                }
-            });
-            
-            // Clear all checkboxes first
-            const categoryBoxes = document.querySelectorAll('input[name="category"]');
-            const socialnessBoxes = document.querySelectorAll('input[name="socialness"]');
-            
-            categoryBoxes.forEach(cb => cb.checked = false);
-            socialnessBoxes.forEach(cb => cb.checked = false);
-            
-            console.log('Found checkboxes:', {categories: categoryBoxes.length, socialness: socialnessBoxes.length});
-            
-            // Handle category checkboxes - support both old single values and new arrays
-            if (activity.category) {
-                const categories = Array.isArray(activity.category) ? activity.category : [activity.category];
-                console.log('Setting categories:', categories);
-                categories.forEach(cat => {
-                    const checkbox = document.querySelector(`input[name="category"][value="${cat}"]`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                        console.log('Checked category:', cat);
-                    } else {
-                        console.error('Category checkbox not found:', cat);
-                    }
-                });
-            }
-            
-            // Handle socialness checkboxes - support both old single values and new arrays
-            if (activity.socialness) {
-                const socialLevels = Array.isArray(activity.socialness) ? activity.socialness : [activity.socialness];
-                console.log('Setting social levels:', socialLevels);
-                socialLevels.forEach(social => {
-                    const checkbox = document.querySelector(`input[name="socialness"][value="${social}"]`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                        console.log('Checked social level:', social);
-                    } else {
-                        console.error('Social level checkbox not found:', social);
-                    }
-                });
-            }
-            
-            hideMessages();
-            document.getElementById('activityModal').style.display = 'block';
-            console.log('Edit modal opened for activity:', activity.name);
-        }
-
-        window.deleteActivity = function(activityId) {
-            const activity = activities.find(a => a.id === activityId);
-            if (!activity) return;
-            
-            // Show confirmation UI instead of using confirm()
-            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
-            if (!activityItem) return;
-            
-            const existingConfirm = activityItem.querySelector('.delete-confirm');
-            if (existingConfirm) {
-                existingConfirm.remove();
-                return;
-            }
-            
-            const confirmDiv = document.createElement('div');
-            confirmDiv.className = 'delete-confirm';
-            confirmDiv.innerHTML = `
-                <div class="delete-confirm-text">Delete "${activity.name}"?</div>
-                <div class="delete-confirm-buttons">
-                    <button class="btn-confirm-delete" onclick="confirmDeleteActivity('${activityId}')">Delete</button>
-                    <button class="btn-cancel-delete" onclick="cancelDeleteActivity('${activityId}')">Cancel</button>
-                </div>
-            `;
-            
-            activityItem.appendChild(confirmDiv);
-            confirmDiv.style.display = 'block';
-        }
-
-        window.confirmDeleteActivity = function(activityId) {
-            activities = activities.filter(a => a.id !== activityId);
-            saveActivities();
-            renderActivityList();
-            window.showRandomActivity();
-            showMessage('Activity deleted successfully!', 'success');
-        }
-
-        window.resetToDefaults = function() {
-            // Show confirmation UI instead of using confirm()
-            const managementModal = document.getElementById('managementModal');
-            const existingConfirm = managementModal.querySelector('.reset-confirm');
-            if (existingConfirm) {
-                existingConfirm.remove();
-                return;
-            }
-            
-            const confirmDiv = document.createElement('div');
-            confirmDiv.className = 'delete-confirm reset-confirm';
-            confirmDiv.innerHTML = `
-                <div class="delete-confirm-text">Reset to default activities? This will replace all current activities and reset completion counts to 0.</div>
-                <div class="delete-confirm-buttons">
-                    <button class="btn-confirm-delete" onclick="confirmResetDefaults()">Reset</button>
-                    <button class="btn-cancel-delete" onclick="cancelResetDefaults()">Cancel</button>
-                </div>
-            `;
-            
-            const addButton = document.getElementById('addActivityBtn');
-            addButton.parentNode.insertBefore(confirmDiv, addButton.nextSibling);
-            confirmDiv.style.display = 'block';
-        }
-
-        window.confirmResetDefaults = function() {
-            activities = getDefaultActivities();
-            saveActivities();
-            renderActivityList();
-            window.showRandomActivity();
-            showMessage('Reset to default activities completed!', 'success');
-            cancelResetDefaults();
-        }
-
-        window.cancelResetDefaults = function() {
-            const confirmDiv = document.querySelector('.reset-confirm');
-            if (confirmDiv) {
-                confirmDiv.remove();
-            }
-        }
-
-        window.saveActivityDirect = function() {
-            console.log('Save function called!');
-            
-            try {
-                // Check if all elements exist first
-                const nameEl = document.getElementById('activityName');
-                const descEl = document.getElementById('activityDescription');
-                const timeEl = document.getElementById('activityTime');
-                const dogEl = document.getElementById('activityDogFriendly');
-                const priceEl = document.getElementById('activityPrice');
-                const locEl = document.getElementById('activityLocation');
-                const driveEl = document.getElementById('activityDriveTime');
-                const seasonEl = document.getElementById('activitySeason');
-                const notesEl = document.getElementById('activityNotes');
-
-                console.log('Elements found:', {nameEl, descEl, timeEl});
-
-                if (!nameEl || !descEl || !timeEl) {
-                    console.error('Required form elements not found in DOM');
-                    return;
-                }
-
-                // Get checkbox values for categories and social levels
-                const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
-                const socialnessCheckboxes = document.querySelectorAll('input[name="socialness"]:checked');
-                
-                const categories = Array.from(categoryCheckboxes).map(cb => cb.value);
-                const socialLevels = Array.from(socialnessCheckboxes).map(cb => cb.value);
-
-                const formData = {
-                    name: nameEl.value.trim(),
-                    description: descEl.value.trim(),
-                    category: categories, // Now an array
-                    timeCommitment: timeEl.value,
-                    socialness: socialLevels, // Now an array
-                    dogFriendly: dogEl ? dogEl.value || 'unknown' : 'unknown',
-                    price: priceEl ? priceEl.value || 'unknown' : 'unknown',
-                    location: locEl ? locEl.value.trim() : '',
-                    driveTime: driveEl ? driveEl.value || 'unknown' : 'unknown',
-                    season: seasonEl ? seasonEl.value || null : null,
-                    notes: notesEl ? notesEl.value.trim() : '',
-                    dateAdded: new Date().toISOString()
-                };
-
-                console.log('Form data collected:', formData);
-
-                // Detailed validation with specific field names
-                const missingFields = [];
-                if (!formData.name) missingFields.push('Activity Name');
-                if (!formData.description) missingFields.push('Description');
-                if (!formData.category || formData.category.length === 0) missingFields.push('Category');
-                if (!formData.timeCommitment) missingFields.push('Time Commitment');
-                if (!formData.socialness || formData.socialness.length === 0) missingFields.push('Social Level');
-
-                if (missingFields.length > 0) {
-                    console.error('Missing required fields:', missingFields);
-                    showMessage('Please fill in these required fields: ' + missingFields.join(', '), 'error');
-                    return;
-                }
-
-                console.log('All validation passed, proceeding to save...');
-
-                if (editingActivityId) {
-                    // Update existing activity
-                    const index = activities.findIndex(a => a.id === editingActivityId);
-                    if (index !== -1) {
-                        activities[index] = { ...activities[index], ...formData };
-                        console.log('Updated existing activity at index:', index);
-                    }
-                } else {
-                    // Add new activity
-                    const newActivity = {
-                        id: Date.now().toString(),
-                        completedCount: 0,
-                        ...formData
-                    };
-                    activities.push(newActivity);
-                    console.log('Added new activity:', newActivity);
-                }
-
-                saveActivities();
-                console.log('Data saved to storage');
-                
-                closeActivityModal();
-                console.log('Modal closed');
-                
-                renderActivityList();
-                console.log('Activity list re-rendered');
-                
-                window.showRandomActivity();
-                console.log('Random activity refreshed');
-                
-                console.log('Activity saved successfully! Total activities:', activities.length);
-                showMessage('Activity saved successfully!', 'success');
-                
-            } catch (error) {
-                console.error('Error saving activity:', error);
-                showMessage('Error saving activity: ' + error.message, 'error');
-            }
-        }
-
+        // Utility functions
         function isLocalStorageAvailable() {
             try {
                 const test = 'test';
@@ -944,6 +665,45 @@
             }
         }
 
+        function showMessage(message, type = 'error') {
+            const errorEl = document.getElementById('errorMessage');
+            const successEl = document.getElementById('successMessage');
+            
+            if (type === 'error') {
+                errorEl.textContent = message;
+                errorEl.style.display = 'block';
+                successEl.style.display = 'none';
+                
+                // Auto-scroll to error message
+                setTimeout(() => {
+                    errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            } else {
+                successEl.textContent = message;
+                successEl.style.display = 'block';
+                errorEl.style.display = 'none';
+                
+                // Auto-scroll to success message
+                setTimeout(() => {
+                    successEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+                successEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function hideMessages() {
+            const errorEl = document.getElementById('errorMessage');
+            const successEl = document.getElementById('successMessage');
+            if (errorEl) errorEl.style.display = 'none';
+            if (successEl) successEl.style.display = 'none';
+        }
+
+        // Data management functions
         function loadActivities() {
             if (isLocalStorageAvailable()) {
                 const stored = localStorage.getItem('tactivities-data');
@@ -966,99 +726,40 @@
             }
         }
 
-        function getCurrentSeason() {
-            const month = new Date().getMonth() + 1;
-            if (month >= 3 && month <= 5) return 'spring';
-            if (month >= 6 && month <= 8) return 'summer';
-            if (month >= 9 && month <= 11) return 'fall';
-            return 'winter';
-        }
-
-        function getFilteredActivities() {
-            const currentSeason = getCurrentSeason();
-            return activities.filter(activity => {
-                if (activity.season && activity.season !== currentSeason) return false;
-                if (filters.timeCommitment && activity.timeCommitment !== filters.timeCommitment) return false;
-                if (filters.socialness && activity.socialness !== filters.socialness) return false;
-                if (filters.dogFriendly && activity.dogFriendly !== filters.dogFriendly) return false;
-                if (filters.price && activity.price !== filters.price) return false;
-                return true;
-            });
-        }
-
-        function showRandomActivity() {
-            const filteredActivities = getFilteredActivities();
-            if (filteredActivities.length === 0) {
-                showNoActivities();
-                return;
-            }
-            const randomIndex = Math.floor(Math.random() * filteredActivities.length);
-            currentActivity = filteredActivities[randomIndex];
-            renderActivity();
-        }
-
-        function showNoActivities() {
-            document.getElementById('activityContainer').innerHTML = `
-                <div class="no-activities">
-                    <h3>No Activities Match Your Current Filters</h3>
-                    <p>Try Adjusting Your Filters Or Add Some New Activities!</p>
-                </div>
-            `;
-        }
-
-        function renderActivity() {
-            if (!currentActivity) return;
-            const activity = currentActivity;
-            document.getElementById('activityContainer').innerHTML = `
-                <div class="activity-card">
-                    ${activity.completedCount > 0 ? `<div class="completed-badge">✓ ${activity.completedCount}</div>` : ''}
-                    <div class="activity-header">
-                        <h2 class="activity-name">${activity.name}</h2>
-                        <span class="activity-category">${Array.isArray(activity.category) ? activity.category.join(', ') : activity.category}</span>
-                    </div>
-                    <p class="activity-description">${activity.description}</p>
-                    <div class="activity-meta">
-                        <span class="meta-tag">⏱️ ${formatTimeCommitment(activity.timeCommitment)}</span>
-                        <span class="meta-tag">👥 ${formatSocialness(activity.socialness)}</span>
-                        <span class="meta-tag">🐕 ${formatDogFriendly(activity.dogFriendly)}</span>
-                        <span class="meta-tag">💰 ${formatPrice(activity.price)}</span>
-                        <span class="meta-tag">🚗 ${formatDriveTime(activity.driveTime)}</span>
-                        ${activity.season ? `<span class="meta-tag">🌿 ${activity.season}</span>` : ''}
-                    </div>
-                    ${activity.location ? `<div class="activity-location">📍 ${activity.location}</div>` : ''}
-                    ${activity.notes ? `<div style="font-size: 0.9rem; color: #b8c5be; margin-top: 10px; font-style: italic;">${activity.notes}</div>` : ''}
-                    <div class="action-buttons">
-                        <button class="btn btn-primary" onclick="completeActivity()">Sounds Good!</button>
-                        <button class="btn btn-secondary" onclick="showRandomActivity()">Not This Time</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function completeActivity() {
-            if (!currentActivity) return;
-            const activityIndex = activities.findIndex(a => a.id === currentActivity.id);
-            if (activityIndex !== -1) {
-                activities[activityIndex].completedCount++;
-                saveActivities();
-                // Update currentActivity reference to match the updated data
-                currentActivity = activities[activityIndex];
-                renderActivity();
-            }
-        }
-
+        // Formatting functions
         function formatTimeCommitment(time) {
-            const timeMap = { 'quick': 'Quick', 'short': 'Short', 'medium': 'Medium', 'long': 'Long' };
+            const timeMap = { 
+                'quick': 'Quick (< 1 Hour)', 
+                'short': 'Short (1-2 Hours)', 
+                'medium': 'Medium (2-4 Hours)', 
+                'long': 'Long (4+ Hours)' 
+            };
             return timeMap[time] || time;
         }
 
         function formatSocialness(social) {
-            const socialMap = { 'solo': 'Solo', 'small_group': 'Small Group', 'large_gathering': 'Large Gathering', 'not_applicable': 'N/A' };
+            if (Array.isArray(social)) {
+                return social.map(s => formatSingleSocialness(s)).join(', ');
+            }
+            return formatSingleSocialness(social);
+        }
+
+        function formatSingleSocialness(social) {
+            const socialMap = { 
+                'solo': 'Solo', 
+                'small_group': 'Small Group', 
+                'large_gathering': 'Large Gathering', 
+                'not_applicable': 'N/A' 
+            };
             return socialMap[social] || social;
         }
 
         function formatDogFriendly(dogFriendly) {
-            const dogMap = { 'yes': 'Dog Friendly', 'no': 'No Dogs', 'unknown': 'Unknown' };
+            const dogMap = { 
+                'yes': 'Dog Friendly', 
+                'no': 'No Dogs', 
+                'unknown': 'Unknown' 
+            };
             return dogMap[dogFriendly] || 'Unknown';
         }
 
@@ -1085,6 +786,111 @@
             return driveMap[driveTime] || 'Unknown';
         }
 
+        function formatSeason(season) {
+            return season ? season.charAt(0).toUpperCase() + season.slice(1) : '';
+        }
+
+        // Season and filtering functions
+        function getCurrentSeason() {
+            const month = new Date().getMonth() + 1;
+            if (month >= 3 && month <= 5) return 'spring';
+            if (month >= 6 && month <= 8) return 'summer';
+            if (month >= 9 && month <= 11) return 'fall';
+            return 'winter';
+        }
+
+        function getFilteredActivities() {
+            const currentSeason = getCurrentSeason();
+            return activities.filter(activity => {
+                // Season filter
+                if (activity.season && activity.season !== currentSeason) return false;
+                
+                // Time commitment filter
+                if (filters.timeCommitment && activity.timeCommitment !== filters.timeCommitment) return false;
+                
+                // Social level filter - handle both arrays and strings
+                if (filters.socialness) {
+                    const activitySocialness = Array.isArray(activity.socialness) ? activity.socialness : [activity.socialness];
+                    if (!activitySocialness.includes(filters.socialness)) return false;
+                }
+                
+                // Dog friendly filter
+                if (filters.dogFriendly && activity.dogFriendly !== filters.dogFriendly) return false;
+                
+                // Price filter
+                if (filters.price && activity.price !== filters.price) return false;
+                
+                return true;
+            });
+        }
+
+        // Activity display functions
+        function showRandomActivity() {
+            const filteredActivities = getFilteredActivities();
+            if (filteredActivities.length === 0) {
+                showNoActivities();
+                return;
+            }
+            const randomIndex = Math.floor(Math.random() * filteredActivities.length);
+            currentActivity = filteredActivities[randomIndex];
+            renderActivity();
+        }
+
+        function showNoActivities() {
+            document.getElementById('activityContainer').innerHTML = `
+                <div class="no-activities">
+                    <h3>No Activities Match Your Current Filters</h3>
+                    <p>Try Adjusting Your Filters Or Add Some New Activities!</p>
+                </div>
+            `;
+        }
+
+        function renderActivity() {
+            if (!currentActivity) return;
+            const activity = currentActivity;
+            
+            // Format arrays for display
+            const categoryDisplay = Array.isArray(activity.category) ? activity.category.join(', ') : activity.category;
+            const socialnessDisplay = formatSocialness(activity.socialness);
+            
+            document.getElementById('activityContainer').innerHTML = `
+                <div class="activity-card">
+                    ${activity.completedCount > 0 ? `<div class="completed-badge">✓ ${activity.completedCount}</div>` : ''}
+                    <div class="activity-header">
+                        <h2 class="activity-name">${activity.name}</h2>
+                        <span class="activity-category">${categoryDisplay}</span>
+                    </div>
+                    <p class="activity-description">${activity.description}</p>
+                    <div class="activity-meta">
+                        <span class="meta-tag">⏱️ ${formatTimeCommitment(activity.timeCommitment)}</span>
+                        <span class="meta-tag">👥 ${socialnessDisplay}</span>
+                        <span class="meta-tag">🐕 ${formatDogFriendly(activity.dogFriendly)}</span>
+                        <span class="meta-tag">💰 ${formatPrice(activity.price)}</span>
+                        <span class="meta-tag">🚗 ${formatDriveTime(activity.driveTime)}</span>
+                        ${activity.season ? `<span class="meta-tag">🌿 ${formatSeason(activity.season)}</span>` : ''}
+                    </div>
+                    ${activity.location ? `<div class="activity-location">📍 ${activity.location}</div>` : ''}
+                    ${activity.notes ? `<div style="font-size: 0.9rem; color: #b8c5be; margin-top: 10px; font-style: italic;">${activity.notes}</div>` : ''}
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="completeActivity()">Sounds Good!</button>
+                        <button class="btn btn-secondary" onclick="showRandomActivity()">Not This Time</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function completeActivity() {
+            if (!currentActivity) return;
+            const activityIndex = activities.findIndex(a => a.id === currentActivity.id);
+            if (activityIndex !== -1) {
+                activities[activityIndex].completedCount++;
+                saveActivities();
+                currentActivity = activities[activityIndex];
+                renderActivity();
+            }
+        }
+
+        // Filter functions
         function toggleFilters() {
             document.getElementById('filtersContainer').classList.toggle('show');
         }
@@ -1097,6 +903,7 @@
             showRandomActivity();
         }
 
+        // Modal functions
         function openManagementModal() {
             renderActivityList();
             document.getElementById('managementModal').style.display = 'block';
@@ -1124,86 +931,299 @@
         }
 
         function openEditActivityModal(activityId) {
-            window.openEditActivityModal(activityId);
+            const activity = activities.find(a => a.id === activityId);
+            if (!activity) {
+                console.error('Activity not found:', activityId);
+                return;
+            }
+            
+            editingActivityId = activityId;
+            document.getElementById('activityModalTitle').textContent = 'Edit Activity';
+            
+            // Fill in text fields
+            document.getElementById('activityName').value = activity.name || '';
+            document.getElementById('activityDescription').value = activity.description || '';
+            document.getElementById('activityTime').value = activity.timeCommitment || '';
+            document.getElementById('activityDogFriendly').value = activity.dogFriendly || '';
+            document.getElementById('activityPrice').value = activity.price || '';
+            document.getElementById('activityLocation').value = activity.location || '';
+            document.getElementById('activityDriveTime').value = activity.driveTime || '';
+            document.getElementById('activitySeason').value = activity.season || '';
+            document.getElementById('activityNotes').value = activity.notes || '';
+            
+            // Clear all checkboxes first
+            document.querySelectorAll('input[name="category"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('input[name="socialness"]').forEach(cb => cb.checked = false);
+            
+            // Handle category checkboxes - support both old single values and new arrays
+            if (activity.category) {
+                const categories = Array.isArray(activity.category) ? activity.category : [activity.category];
+                categories.forEach(cat => {
+                    const checkbox = document.querySelector(`input[name="category"][value="${cat}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+            
+            // Handle socialness checkboxes - support both old single values and new arrays
+            if (activity.socialness) {
+                const socialLevels = Array.isArray(activity.socialness) ? activity.socialness : [activity.socialness];
+                socialLevels.forEach(social => {
+                    const checkbox = document.querySelector(`input[name="socialness"][value="${social}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            }
+            
+            hideMessages();
+            document.getElementById('activityModal').style.display = 'block';
+        }
+
+        // Activity CRUD functions
+        function saveActivity() {
+            try {
+                // Get form elements
+                const nameEl = document.getElementById('activityName');
+                const descEl = document.getElementById('activityDescription');
+                const timeEl = document.getElementById('activityTime');
+                const dogEl = document.getElementById('activityDogFriendly');
+                const priceEl = document.getElementById('activityPrice');
+                const locEl = document.getElementById('activityLocation');
+                const driveEl = document.getElementById('activityDriveTime');
+                const seasonEl = document.getElementById('activitySeason');
+                const notesEl = document.getElementById('activityNotes');
+
+                if (!nameEl || !descEl || !timeEl) {
+                    throw new Error('Required form elements not found');
+                }
+
+                // Get checkbox values for categories and social levels
+                const categoryCheckboxes = document.querySelectorAll('input[name="category"]:checked');
+                const socialnessCheckboxes = document.querySelectorAll('input[name="socialness"]:checked');
+                
+                const categories = Array.from(categoryCheckboxes).map(cb => cb.value);
+                const socialLevels = Array.from(socialnessCheckboxes).map(cb => cb.value);
+
+                const formData = {
+                    name: nameEl.value.trim(),
+                    description: descEl.value.trim(),
+                    category: categories,
+                    timeCommitment: timeEl.value,
+                    socialness: socialLevels,
+                    dogFriendly: dogEl ? dogEl.value || 'unknown' : 'unknown',
+                    price: priceEl ? priceEl.value || 'unknown' : 'unknown',
+                    location: locEl ? locEl.value.trim() : '',
+                    driveTime: driveEl ? driveEl.value || 'unknown' : 'unknown',
+                    season: seasonEl ? seasonEl.value || null : null,
+                    notes: notesEl ? notesEl.value.trim() : '',
+                    dateAdded: new Date().toISOString()
+                };
+
+                // Validation
+                const missingFields = [];
+                if (!formData.name) missingFields.push('Activity Name');
+                if (!formData.description) missingFields.push('Description');
+                if (!formData.category || formData.category.length === 0) missingFields.push('Category');
+                if (!formData.timeCommitment) missingFields.push('Time Commitment');
+                if (!formData.socialness || formData.socialness.length === 0) missingFields.push('Social Level');
+
+                if (missingFields.length > 0) {
+                    showMessage('Please fill in these required fields: ' + missingFields.join(', '), 'error');
+                    return;
+                }
+
+                if (editingActivityId) {
+                    // Update existing activity
+                    const index = activities.findIndex(a => a.id === editingActivityId);
+                    if (index !== -1) {
+                        activities[index] = { ...activities[index], ...formData };
+                    }
+                } else {
+                    // Add new activity
+                    const newActivity = {
+                        id: Date.now().toString(),
+                        completedCount: 0,
+                        ...formData
+                    };
+                    activities.push(newActivity);
+                }
+
+                saveActivities();
+                closeActivityModal();
+                renderActivityList();
+                showRandomActivity();
+                
+                showMessage('Activity saved successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error saving activity:', error);
+                showMessage('Error saving activity: ' + error.message, 'error');
+            }
         }
 
         function deleteActivity(activityId) {
-            window.deleteActivity(activityId);
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
-            window.saveActivityDirect();
-        }
-
-        function handleFormSubmit(e) {
-            e.preventDefault();
+            const activity = activities.find(a => a.id === activityId);
+            if (!activity) return;
             
-            const formData = {
-                name: document.getElementById('activityName').value,
-                description: document.getElementById('activityDescription').value,
-                category: document.getElementById('activityCategory').value,
-                timeCommitment: document.getElementById('activityTime').value,
-                socialness: document.getElementById('activitySocialness').value,
-                dogFriendly: document.getElementById('activityDogFriendly').value || 'unknown',
-                price: document.getElementById('activityPrice').value || 'unknown',
-                location: document.getElementById('activityLocation').value,
-                driveTime: document.getElementById('activityDriveTime').value || 'unknown',
-                season: document.getElementById('activitySeason').value || null,
-                notes: document.getElementById('activityNotes').value,
-                dateAdded: new Date().toISOString()
-            };
-
-            if (editingActivityId) {
-                const index = activities.findIndex(a => a.id === editingActivityId);
-                if (index !== -1) {
-                    activities[index] = { ...activities[index], ...formData };
-                }
-            } else {
-                const newActivity = {
-                    id: Date.now().toString(),
-                    completedCount: 0,
-                    ...formData
-                };
-                activities.push(newActivity);
+            // Show confirmation UI
+            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (!activityItem) return;
+            
+            const existingConfirm = activityItem.querySelector('.delete-confirm');
+            if (existingConfirm) {
+                existingConfirm.remove();
+                return;
             }
+            
+            const confirmDiv = document.createElement('div');
+            confirmDiv.className = 'delete-confirm';
+            confirmDiv.innerHTML = `
+                <div class="delete-confirm-text">Delete "${activity.name}"?</div>
+                <div class="delete-confirm-buttons">
+                    <button class="btn-confirm-delete" onclick="confirmDeleteActivity('${activityId}')">Delete</button>
+                    <button class="btn-cancel-delete" onclick="cancelDeleteActivity('${activityId}')">Cancel</button>
+                </div>
+            `;
+            
+            activityItem.appendChild(confirmDiv);
+            confirmDiv.style.display = 'block';
+        }
 
+        function confirmDeleteActivity(activityId) {
+            activities = activities.filter(a => a.id !== activityId);
             saveActivities();
-            closeActivityModal();
             renderActivityList();
             showRandomActivity();
         }
 
-        function deleteActivity(activityId) {
-            if (confirm('Are You Sure You Want To Delete This Activity?')) {
-                activities = activities.filter(a => a.id !== activityId);
-                saveActivities();
-                renderActivityList();
-                showRandomActivity();
+        function cancelDeleteActivity(activityId) {
+            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
+            if (activityItem) {
+                const confirmDiv = activityItem.querySelector('.delete-confirm');
+                if (confirmDiv) {
+                    confirmDiv.remove();
+                }
             }
         }
 
+        // Reset functionality
+        function resetToDefaults() {
+            const resetBtn = document.getElementById('resetDefaultsBtn');
+            const existingConfirm = resetBtn.parentNode.querySelector('.reset-confirm');
+            if (existingConfirm) {
+                existingConfirm.remove();
+                return;
+            }
+            
+            const confirmDiv = document.createElement('div');
+            confirmDiv.className = 'delete-confirm reset-confirm';
+            confirmDiv.innerHTML = `
+                <div class="delete-confirm-text">Reset to defaults? This will restore any missing default activities and reset all completion counts to 0. Custom activities will be preserved.</div>
+                <div class="delete-confirm-buttons">
+                    <button class="btn-confirm-delete" onclick="confirmResetDefaults()">Reset</button>
+                    <button class="btn-cancel-delete" onclick="cancelResetDefaults()">Cancel</button>
+                </div>
+            `;
+            
+            resetBtn.parentNode.insertBefore(confirmDiv, resetBtn.nextSibling);
+            confirmDiv.style.display = 'block';
+        }
+
+        function confirmResetDefaults() {
+            try {
+                const defaults = getDefaultActivities();
+                
+                // Reset completion counts for all existing activities
+                activities.forEach(activity => {
+                    activity.completedCount = 0;
+                });
+                
+                // Find missing defaults and add them back
+                let addedCount = 0;
+                
+                defaults.forEach(defaultActivity => {
+                    const existingIndex = activities.findIndex(a => a.id === defaultActivity.id);
+                    
+                    if (existingIndex === -1) {
+                        // Default activity is missing, add it back
+                        activities.push({ ...defaultActivity });
+                        addedCount++;
+                    } else {
+                        // Default activity exists, update it to current default structure
+                        activities[existingIndex] = { ...defaultActivity, completedCount: 0 };
+                    }
+                });
+                
+                saveActivities();
+                renderActivityList();
+                showRandomActivity();
+                
+                // Update button text to show results
+                const resetBtn = document.getElementById('resetDefaultsBtn');
+                const originalText = resetBtn.textContent;
+                
+                resetBtn.textContent = `✓ Reset Done! +${addedCount} restored`;
+                resetBtn.style.background = '#7ba885';
+                
+                setTimeout(() => {
+                    resetBtn.textContent = originalText;
+                    resetBtn.style.background = '';
+                }, 3000);
+                
+                cancelResetDefaults();
+                
+            } catch (error) {
+                const resetBtn = document.getElementById('resetDefaultsBtn');
+                const originalText = resetBtn.textContent;
+                resetBtn.textContent = `✗ Error: ${error.message}`;
+                resetBtn.style.background = '#d67070';
+                
+                setTimeout(() => {
+                    resetBtn.textContent = originalText;
+                    resetBtn.style.background = '';
+                }, 3000);
+                
+                cancelResetDefaults();
+            }
+        }
+
+        function cancelResetDefaults() {
+            const confirmDiv = document.querySelector('.reset-confirm');
+            if (confirmDiv) {
+                confirmDiv.remove();
+            }
+        }
+
+        // Render activity list
         function renderActivityList() {
             if (activities.length === 0) {
                 document.getElementById('activityList').innerHTML = '<p style="text-align: center; color: #8fa395;">No Activities Yet. Add Some To Get Started!</p>';
                 return;
             }
 
-            document.getElementById('activityList').innerHTML = activities.map(activity => `
-                <div class="activity-item" data-activity-id="${activity.id}">
-                    <div class="activity-item-name">${activity.name}</div>
-                    <div class="activity-item-meta">
-                        ${Array.isArray(activity.category) ? activity.category.join(', ') : activity.category} • ${formatTimeCommitment(activity.timeCommitment)} • ${Array.isArray(activity.socialness) ? activity.socialness.map(s => formatSocialness(s)).join(', ') : formatSocialness(activity.socialness)} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)} • ${formatDriveTime(activity.driveTime)}
-                        ${activity.completedCount > 0 ? ` • Completed ${activity.completedCount} Times` : ''}
+            document.getElementById('activityList').innerHTML = activities.map(activity => {
+                const categoryDisplay = Array.isArray(activity.category) ? activity.category.join(', ') : activity.category;
+                const socialnessDisplay = formatSocialness(activity.socialness);
+                
+                return `
+                    <div class="activity-item" data-activity-id="${activity.id}">
+                        <div class="activity-item-name">${activity.name}</div>
+                        <div class="activity-item-meta">
+                            ${categoryDisplay} • ${formatTimeCommitment(activity.timeCommitment)} • ${socialnessDisplay} • ${formatDogFriendly(activity.dogFriendly)} • ${formatPrice(activity.price)} • ${formatDriveTime(activity.driveTime)}
+                            ${activity.completedCount > 0 ? ` • Completed ${activity.completedCount} Times` : ''}
+                        </div>
+                        <div class="activity-item-actions">
+                            <button class="btn btn-small btn-edit" onclick="openEditActivityModal('${activity.id}')">Edit</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteActivity('${activity.id}')">Delete</button>
+                        </div>
                     </div>
-                    <div class="activity-item-actions">
-                        <button class="btn btn-small btn-edit" onclick="openEditActivityModal('${activity.id}')">Edit</button>
-                        <button class="btn btn-small btn-danger" onclick="deleteActivity('${activity.id}')">Delete</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
+        // Default activities data
         function getDefaultActivities() {
             return [
                 {
@@ -1369,39 +1389,28 @@
             ];
         }
 
-        function init() {
-            loadActivities();
-            setupEventListeners();
-            showRandomActivity();
-        }
-
-        window.cancelDeleteActivity = function(activityId) {
-            const activityItem = document.querySelector(`[data-activity-id="${activityId}"]`);
-            if (activityItem) {
-                const confirmDiv = activityItem.querySelector('.delete-confirm');
-                if (confirmDiv) {
-                    confirmDiv.remove();
-                }
-            }
-        }
-
+        // Event handlers
         function setupEventListeners() {
+            // Filter controls
             document.getElementById('filterBtn').addEventListener('click', toggleFilters);
             document.getElementById('timeFilter').addEventListener('change', handleFilterChange);
             document.getElementById('socialnessFilter').addEventListener('change', handleFilterChange);
             document.getElementById('dogFriendlyFilter').addEventListener('change', handleFilterChange);
             document.getElementById('priceFilter').addEventListener('change', handleFilterChange);
+            
+            // Modal controls
             document.getElementById('managementBtn').addEventListener('click', openManagementModal);
             document.getElementById('addActivityBtn').addEventListener('click', openAddActivityModal);
             document.getElementById('closeManagementModal').addEventListener('click', closeManagementModal);
             document.getElementById('closeActivityModal').addEventListener('click', closeActivityModal);
             
-            // Fix: Properly attach form submit handler
-            const form = document.getElementById('activityForm');
-            if (form) {
-                form.addEventListener('submit', handleFormSubmit);
-            }
-
+            // Form submission
+            document.getElementById('saveActivityBtn').addEventListener('click', saveActivity);
+            
+            // Reset functionality
+            document.getElementById('resetDefaultsBtn').addEventListener('click', resetToDefaults);
+            
+            // Modal backdrop click
             window.addEventListener('click', function(event) {
                 if (event.target === document.getElementById('managementModal')) {
                     closeManagementModal();
@@ -1412,6 +1421,14 @@
             });
         }
 
+        // Initialization
+        function init() {
+            loadActivities();
+            setupEventListeners();
+            showRandomActivity();
+        }
+
+        // Start the app when DOM is ready
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
